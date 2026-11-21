@@ -1,0 +1,35 @@
+name: Deploy cPanel Approval Hub
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'cpanel-web/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  web-deploy:
+    name: Deploy to cPanel Subdomain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.CPANEL_FTP_SERVER }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          server-dir: ${{ secrets.CPANEL_TARGET_DIR || 'social.meradomain.in/' }}
+          local-dir: './cpanel-web/'
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.env
+            **/public/uploads/**
+            !**/public/uploads/.gitkeep
+            **/tests/**
+            **/schema.sql

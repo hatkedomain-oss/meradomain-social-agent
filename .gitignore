@@ -1,0 +1,57 @@
+# Environment & Secrets
+.env
+*.env
+.env.local
+.env.production
+cpanel-web/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Browser automation profiles & sessions (sensitive credentials)
+**/browser_profiles/
+**/sessions/
+*.session
+*.cookies
+
+# Uploads & Temporary Outputs
+local-worker/outputs/*.png
+local-worker/outputs/*.jpg
+local-worker/outputs/*.mp4
+!local-worker/outputs/.gitkeep
+cpanel-web/public/uploads/*
+!cpanel-web/public/uploads/.gitkeep
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor caches
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
