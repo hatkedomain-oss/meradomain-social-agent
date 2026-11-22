@@ -58,7 +58,10 @@ if ($file['size'] > 50 * 1024 * 1024) {
 $ext = $allowedTypes[$mimeType];
 $safeName = 'media_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
 
-$uploadDir = dirname(__DIR__) . '/public/uploads';
+$uploadDir = dirname(__DIR__) . '/uploads';
+if (!is_dir($uploadDir) && is_dir(dirname(__DIR__) . '/public/uploads')) {
+    $uploadDir = dirname(__DIR__) . '/public/uploads';
+}
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }

@@ -1,0 +1,31 @@
+# ==============================================================================
+# MeraDomain Social Media Studio - Apache Configuration
+# Target: social.meradomain.in
+# ==============================================================================
+
+# Force index.php over any default cPanel index.html placeholder
+DirectoryIndex index.php index.html
+
+# Disable directory browsing
+Options -Indexes
+
+# Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Allow direct access to existing files and directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Route API calls properly if trailing slash or missing extension
+    RewriteRule ^api/posts$ api/posts.php [L,QSA]
+    RewriteRule ^api/upload$ api/upload.php [L,QSA]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>

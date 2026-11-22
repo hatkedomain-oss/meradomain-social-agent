@@ -6,8 +6,13 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../src/Database.php';
-require_once __DIR__ . '/../src/Auth.php';
+if (file_exists(__DIR__ . '/src/Database.php')) {
+    require_once __DIR__ . '/src/Database.php';
+    require_once __DIR__ . '/src/Auth.php';
+} else {
+    require_once __DIR__ . '/../src/Database.php';
+    require_once __DIR__ . '/../src/Auth.php';
+}
 
 use MeraDomain\Auth;
 
