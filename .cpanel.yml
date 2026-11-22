@@ -1,15 +1,10 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH1=/home4/hatkev6t/public_html/social
-    - export DEPLOYPATH2=/home4/hatkev6t/social.meradomain.in
-    
-    # Primary Subdomain Path
-    - /bin/mkdir -p $DEPLOYPATH1
-    - /bin/cp -R cpanel-web/* $DEPLOYPATH1/
-    - /bin/cp cpanel-web/.htaccess $DEPLOYPATH1/ 2>/dev/null || true
-    - /bin/rm -f $DEPLOYPATH1/index.html
-    - /bin/chmod -R 755 $DEPLOYPATH1
-
-    # Secondary Subdomain Path (if cPanel created document root outside public_html)
-    - if [ -d "$DEPLOYPATH2" ]; then /bin/cp -R cpanel-web/* $DEPLOYPATH2/; /bin/cp cpanel-web/.htaccess $DEPLOYPATH2/ 2>/dev/null || true; /bin/rm -f $DEPLOYPATH2/index.html; /bin/chmod -R 755 $DEPLOYPATH2; fi
+    # Exact Document Root identified from cPanel File Manager
+    - export DEPLOYPATH=/home4/hatkev6t/social.meradomain.in
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R cpanel-web/* $DEPLOYPATH/
+    - /bin/cp cpanel-web/.htaccess $DEPLOYPATH/ 2>/dev/null || true
+    - /bin/rm -f $DEPLOYPATH/index.html
+    - /bin/chmod -R 755 $DEPLOYPATH
