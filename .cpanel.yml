@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    # Target directory for the social.meradomain.in subdomain
+    # Update this path if your subdomain document root is different
+    - export DEPLOYPATH=/home4/hatkev6t/public_html/social/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R cpanel-web/* $DEPLOYPATH
+    - /bin/chmod -R 755 $DEPLOYPATH
