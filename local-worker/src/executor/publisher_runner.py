@@ -145,16 +145,26 @@ class ExecutionRunner:
             )
             page = await context.new_page()
 
-            target_url = f"https://www.facebook.com/{page_id}"
+            target_url = "https://www.facebook.com/meradomain"
             logger.info(f"Navigating to Facebook Page: {target_url}...")
-            await page.goto(target_url, timeout=35000, wait_until="domcontentloaded")
-            await asyncio.sleep(4)
+            try:
+                await page.goto(target_url, timeout=40000, wait_until="load")
+            except Exception as e:
+                logger.warning(f"Initial navigation notice: {e}")
+            await asyncio.sleep(5)
 
-            # Check login state
-            content = await page.content()
-            if "login" in page.url or ('name="email"' in content and 'name="pass"' in content):
-                await context.close()
-                return False, "", "Facebook session expired. Please sign into Facebook once in Chrome."
+            # Check login state via session cookies (prevents navigation crash)
+            cookies = await context.cookies()
+            has_cuser = any(c.get("name") == "c_user" for c in cookies)
+            
+            if not has_cuser:
+                try:
+                    content = await page.content()
+                    if "login" in page.url or ('name="email"' in content and 'name="pass"' in content):
+                        await context.close()
+                        return False, "", "Facebook session expired. Please sign into Facebook once in Chrome."
+                except Exception:
+                    pass
 
             # Switch to Page profile if needed
             switch_btn = await page.query_selector('div[role="button"]:has-text("Switch Now"), button:has-text("Switch Now")')
@@ -332,8 +342,9 @@ class ExecutionRunner:
             return False, "", "Could not click LinkedIn submit button."
 
     async def _publish_instagram(self, post: Dict[str, Any], media_path: Optional[Path]) -> Tuple[bool, str, str]:
-        """Publishes to Instagram via Meta Business Suite or web composer."""
-        profile_path = self.profiles_dir / "facebook"
+        """Publishes to Instagram feed via web composer using saved session."""
+        profile_path = self.profiles_dir / "instagram"
+        profile_path.mkdir(parents=True, exist_ok=True)
         message = post["post_text"]
         if post.get("hashtags"):
             message += "\n\n" + post["hashtags"]
@@ -348,44 +359,52 @@ class ExecutionRunner:
             )
             page = await context.new_page()
 
-            # Meta Business Suite Composer
-            composer_url = "https://business.facebook.com/latest/composer"
-            logger.info(f"Navigating to Meta Business Suite: {composer_url}...")
-            try:
-                await page.goto(composer_url, timeout=35000, wait_until="domcontentloaded")
-                await asyncio.sleep(5)
-            except Exception:
+            logger.info("Navigating to Instagram...")
+            await page.goto("https://www.instagram.com/", timeout=35000, wait_until="domcontentloaded")
+            await asyncio.sleep(4)
+
+            content = await page.content()
+            if "accounts/login" in page.url or "login" in page.url or 'name="username"' in content:
                 await context.close()
-                return False, "", "Meta Business Suite is unreachable."
+                return False, "", "Instagram session not logged in. Please run 'python launch_ig_login.py' once to authenticate."
 
-            if "login" in page.url:
-                await context.close()
-                return False, "", "Meta Business session expired. Please log into Facebook in Chrome."
+            # Find 'New post' / 'Create' button
+            create_btn = await page.query_selector('svg[aria-label="New post"], a[href="#"][role="link"]:has-text("Create"), span:has-text("Create")')
+            if create_btn:
+                await create_btn.click()
+                await asyncio.sleep(3)
 
-            # If image exists, attach
-            if media_path and media_path.exists():
-                file_input = await page.query_selector('input[type="file"]')
-                if file_input:
-                    await file_input.set_input_files(str(media_path))
-                    await asyncio.sleep(4)
+                if media_path and media_path.exists():
+                    file_input = await page.query_selector('input[type="file"]')
+                    if file_input:
+                        await file_input.set_input_files(str(media_path))
+                        await asyncio.sleep(4)
 
-            # Fill caption
-            caption_box = await page.query_selector('div[role="textbox"], textarea[placeholder*="text" i]')
-            if caption_box:
-                await caption_box.click()
-                await page.keyboard.type(message, delay=10)
-                await asyncio.sleep(2)
+                        # Click Next -> Next
+                        for _ in range(2):
+                            next_btn = await page.query_selector('div[role="button"]:has-text("Next"), button:has-text("Next")')
+                            if next_btn and await next_btn.is_visible():
+                                await next_btn.click()
+                                await asyncio.sleep(2)
 
-            # Click Publish
-            pub_btn = await page.query_selector('div[role="button"]:has-text("Publish"), button:has-text("Publish")')
-            if pub_btn and await pub_btn.is_visible():
-                await pub_btn.click()
-                await asyncio.sleep(6)
-                await context.close()
-                return True, "https://www.instagram.com/meradomain", ""
+                        # Caption box
+                        caption_box = await page.query_selector('div[aria-label*="Write a caption" i], div[role="textbox"]')
+                        if caption_box:
+                            await caption_box.click()
+                            await page.keyboard.type(message, delay=10)
+                            await asyncio.sleep(2)
+
+                        # Share button
+                        share_btn = await page.query_selector('div[role="button"]:has-text("Share"), button:has-text("Share")')
+                        if share_btn and await share_btn.is_visible():
+                            await share_btn.click()
+                            logger.info("Clicked Share on Instagram. Waiting 8s...")
+                            await asyncio.sleep(8)
+                            await context.close()
+                            return True, "https://www.instagram.com/meradomain", ""
 
             await context.close()
-            return False, "", "Could not click Publish button in Meta Business Suite."
+            return False, "", "Instagram composer could not complete. Please check Instagram session."
 
     async def _publish_gmb(self, post: Dict[str, Any], media_path: Optional[Path]) -> Tuple[bool, str, str]:
         """Publishes local SEO update to Google Business Profile."""
