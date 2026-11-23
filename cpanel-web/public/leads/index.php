@@ -3,7 +3,6 @@ require __DIR__.'/bootstrap.php';
 $error='';$message='';
 $stages=['New','Reviewed','Contacted','Replied','Verified Response (Call Ready)','Meeting','Proposal','Won','Lost','Do not contact'];
 if($_SERVER['REQUEST_METHOD']==='POST') {
- csrf();
  $action=$_POST['action']??'';
  if(!$action && isset($_POST['password'])) { $action = 'login'; }
  if($action==='login') {
@@ -16,7 +15,7 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
   if($isValid){
       session_regenerate_id(true);
       $_SESSION['user']=true;
-      $db->prepare('DELETE FROM login_attempts WHERE client=?')->execute([$client]);
+      $_SESSION['csrf']=bin2hex(random_bytes(24));
       session_write_close();
       header('Location: index.php');
       exit;
@@ -24,6 +23,8 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
       $error='Password not recognised. Please ensure exact spelling: MeraDomain@2026!';
   }
  } elseif(logged()) {
+  csrf();
+  if($action==='logout'){$_SESSION=[];session_destroy();header('Location: index.php');exit;}
   if($action==='logout'){$_SESSION=[];session_destroy();header('Location: index.php');exit;}
   if($action==='add'){$message=addLead($db,$_POST)?'Prospect added.':'Not added: enter a company and valid website, or check for an existing domain.';}
   if($action==='update'){
