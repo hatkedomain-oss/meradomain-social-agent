@@ -87,7 +87,7 @@ $csrfToken = Auth::getCsrfToken();
                 </button>
 
                 <!-- Outbound Lead Studio Button -->
-                <a href="/leads/" target="_blank" title="Open Outbound Lead Studio in New Tab" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-semibold transition shadow-sm">
+                <a href="/leads/index.php?key=MeraDomain@2026!" target="_blank" title="Open Outbound Lead Studio in New Tab" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-semibold transition shadow-sm">
                     <i class="fas fa-crosshairs text-xs"></i>
                     <span class="hidden sm:inline">Lead Studio ↗</span>
                 </a>

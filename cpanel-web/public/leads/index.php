@@ -6,13 +6,9 @@ $stages=['New','Reviewed','Contacted','Replied','Verified Response (Call Ready)'
 // Direct 1-Click Authentication via URL key
 if (isset($_GET['key'])) {
     $k = trim($_GET['key']);
-    if (in_array($k, ['MeraDomain@2026!', 'meradomain@2026!'], true) || password_verify($k, $config['password_hash'])) {
-        session_regenerate_id(true);
+    if (in_array($k, ['MeraDomain@2026!', 'meradomain@2026!'], true) || (!empty($config['password_hash']) && password_verify($k, $config['password_hash']))) {
         $_SESSION['user'] = true;
         $_SESSION['csrf'] = bin2hex(random_bytes(24));
-        session_write_close();
-        header('Location: index.php');
-        exit;
     }
 }
 
@@ -22,19 +18,17 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
  if($action==='login') {
   $client=hash('sha256',$_SERVER['REMOTE_ADDR']??'local');$now=time();
   $pass=trim($_POST['password']??'');
-  $isValid = password_verify($pass, $config['password_hash'])
-          || password_verify(strtolower($pass), $config['password_hash'])
+  $isValid = (!empty($config['password_hash']) && password_verify($pass, $config['password_hash']))
+          || (!empty($config['password_hash']) && password_verify(strtolower($pass), $config['password_hash']))
           || in_array($pass, ['MeraDomain@2026!', 'meradomain@2026!'], true);
 
   if($isValid){
       session_regenerate_id(true);
       $_SESSION['user']=true;
       $_SESSION['csrf']=bin2hex(random_bytes(24));
-      session_write_close();
-      header('Location: index.php');
-      exit;
+      // Direct render without redirect ensures browser does not drop session on 302
   } else {
-      $error='Password not recognised. Form received: "' . esc($pass) . '" (Required: MeraDomain@2026!)';
+      $error='Password not recognised. Required: MeraDomain@2026!';
   }
  } elseif(logged()) {
   csrf();
