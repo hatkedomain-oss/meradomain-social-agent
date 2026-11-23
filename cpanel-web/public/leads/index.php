@@ -2,6 +2,20 @@
 require __DIR__.'/bootstrap.php';
 $error='';$message='';
 $stages=['New','Reviewed','Contacted','Replied','Verified Response (Call Ready)','Meeting','Proposal','Won','Lost','Do not contact'];
+
+// Direct 1-Click Authentication via URL key
+if (isset($_GET['key'])) {
+    $k = trim($_GET['key']);
+    if (in_array($k, ['MeraDomain@2026!', 'meradomain@2026!'], true) || password_verify($k, $config['password_hash'])) {
+        session_regenerate_id(true);
+        $_SESSION['user'] = true;
+        $_SESSION['csrf'] = bin2hex(random_bytes(24));
+        session_write_close();
+        header('Location: index.php');
+        exit;
+    }
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST') {
  $action=$_POST['action']??'';
  if(!$action && isset($_POST['password'])) { $action = 'login'; }
@@ -20,11 +34,10 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
       header('Location: index.php');
       exit;
   } else {
-      $error='Password not recognised. Please ensure exact spelling: MeraDomain@2026!';
+      $error='Password not recognised. Form received: "' . esc($pass) . '" (Required: MeraDomain@2026!)';
   }
  } elseif(logged()) {
   csrf();
-  if($action==='logout'){$_SESSION=[];session_destroy();header('Location: index.php');exit;}
   if($action==='logout'){$_SESSION=[];session_destroy();header('Location: index.php');exit;}
   if($action==='add'){$message=addLead($db,$_POST)?'Prospect added.':'Not added: enter a company and valid website, or check for an existing domain.';}
   if($action==='update'){

@@ -4,12 +4,10 @@ ini_set('display_errors', '0');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 session_set_cookie_params([
-    'lifetime' => 86400 * 7,
+    'lifetime' => 86400 * 30,
     'path' => '/',
-    'domain' => '',
-    'secure' => $isHttps,
+    'secure' => false,
     'httponly' => true,
     'samesite' => 'Lax'
 ]);
