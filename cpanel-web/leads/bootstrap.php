@@ -12,17 +12,27 @@ $configCandidates = array_filter([
     dirname(__DIR__, 2).'/meradomain-leads-config.php', // cPanel /home/USER/public_html/leads
     dirname(__DIR__, 1).'/meradomain-leads-config.php', // cPanel /home/USER/leads.meradomain.com or local root
     __DIR__.'/../meradomain-leads-config.php',
-    __DIR__.'/meradomain-leads-config.php'
+    __DIR__.'/meradomain-leads-config.php',
+    __DIR__.'/config.php',
+    __DIR__.'/config.example.php'
 ]);
 $configPath = '';
 foreach ($configCandidates as $cand) {
     if (is_file($cand)) { $configPath = $cand; break; }
 }
 if (!$configPath) {
-    http_response_code(503); exit('Setup needed. Follow INSTALL.md and place meradomain-leads-config.php in your home directory or project root.');
+    http_response_code(503); exit('Setup needed. Follow INSTALL.md and place meradomain-leads-config.php in /home4/hatkev6t/meradomain-leads-config.php');
 }
-$config = require $configPath;
-if (!is_array($config) || empty($config['password_hash']) || $config['password_hash']==='REPLACE_WITH_PASSWORD_HASH') { http_response_code(503); exit('Set your app password hash in the private configuration file.'); }
+try {
+    $config = require $configPath;
+} catch (Throwable $e) {
+    http_response_code(500);
+    exit("Configuration error in " . htmlspecialchars(basename($configPath)) . " on line " . $e->getLine() . ": " . htmlspecialchars($e->getMessage()));
+}
+if (!is_array($config) || empty($config['password_hash']) || $config['password_hash']==='REPLACE_WITH_PASSWORD_HASH') { 
+    http_response_code(503); 
+    exit('Set your app password hash in ' . htmlspecialchars(basename($configPath))); 
+}
 try {
  $db = new PDO($config['dsn'], $config['db_user'] ?? null, $config['db_password'] ?? null, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
  $sqlite = $db->getAttribute(PDO::ATTR_DRIVER_NAME)==='sqlite';
@@ -30,7 +40,10 @@ try {
  $db->exec("CREATE TABLE IF NOT EXISTS leads (id $id, company VARCHAR(240) NOT NULL, website VARCHAR(1000) NOT NULL, country VARCHAR(120) NOT NULL, industry VARCHAR(240) NOT NULL, offer VARCHAR(240) NOT NULL, evidence TEXT NOT NULL, opportunity TEXT NOT NULL, sources TEXT NOT NULL, score INTEGER NOT NULL, status VARCHAR(40) NOT NULL, notes TEXT NOT NULL, followup VARCHAR(10) NOT NULL, created VARCHAR(30) NOT NULL)");
  $db->exec('CREATE TABLE IF NOT EXISTS research_usage (month VARCHAR(7) PRIMARY KEY, runs INTEGER NOT NULL)');
  $db->exec('CREATE TABLE IF NOT EXISTS login_attempts (client VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL, window_start INTEGER NOT NULL)');
-} catch (Throwable $e) { http_response_code(503); exit('Database unavailable. Check the private configuration and database permissions.'); }
+} catch (Throwable $e) { 
+    http_response_code(503); 
+    exit('Database unavailable: ' . htmlspecialchars($e->getMessage())); 
+}
 $_SESSION['csrf'] ??= bin2hex(random_bytes(24));
 function esc($v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function logged(): bool { return !empty($_SESSION['user']); }
