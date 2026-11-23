@@ -9,6 +9,19 @@ if (isset($_GET['key'])) {
     if (in_array($k, ['MeraDomain@2026!', 'meradomain@2026!'], true) || (!empty($config['password_hash']) && password_verify($k, $config['password_hash']))) {
         $_SESSION['user'] = true;
         $_SESSION['csrf'] = bin2hex(random_bytes(24));
+        if (!empty($_GET['set_key']) && is_file($configPath) && is_writable($configPath)) {
+            $newKey = trim($_GET['set_key']);
+            $cur = file_get_contents($configPath);
+            if (preg_match("/'openai_key'\s*=>\s*'[^']*'/", $cur)) {
+                $upd = preg_replace("/'openai_key'\s*=>\s*'[^']*'/", "'openai_key' => '{$newKey}'", $cur);
+            } else {
+                $upd = preg_replace("/\];\s*$/", "  'openai_key' => '{$newKey}',\n];", $cur);
+            }
+            if ($upd && file_put_contents($configPath, $upd)) {
+                $config['openai_key'] = $newKey;
+                $message = 'OpenAI API key saved successfully. Live research is now connected!';
+            }
+        }
     }
 }
 
@@ -42,6 +55,23 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
   if($action==='delete'){
    $db->prepare('DELETE FROM leads WHERE id=?')->execute([(int)($_POST['id']??0)]);$message='Prospect removed.';
   }
+  if($action==='set_openai_key'){
+   $newKey=trim($_POST['openai_key']??'');
+   if($newKey && is_file($configPath) && is_writable($configPath)){
+    $cur=file_get_contents($configPath);
+    if(preg_match("/'openai_key'\s*=>\s*'[^']*'/", $cur)){
+     $upd=preg_replace("/'openai_key'\s*=>\s*'[^']*'/", "'openai_key' => '{$newKey}'", $cur);
+    }else{
+     $upd=preg_replace("/\];\s*$/", "  'openai_key' => '{$newKey}',\n];", $cur);
+    }
+    if($upd && file_put_contents($configPath, $upd)){
+     $config['openai_key']=$newKey;
+     $message='OpenAI API key saved successfully. Live research is now connected!';
+    }else{
+     $error='Could not write to server config file. Check permissions on ' . htmlspecialchars(basename($configPath));
+    }
+   }
+  }
  }
 }
 if(logged()&&($_GET['export']??'')==='csv'){
@@ -59,7 +89,7 @@ $month=gmdate('Y-m');$q=$db->prepare('SELECT runs FROM research_usage WHERE mont
 <?php if(!logged()):?><section class="login panel"><p class="eyebrow">PRIVATE WORKSPACE</p><h2>Welcome back, Vipin.</h2><p class="muted">Sign in to research businesses and manage your prospects.</p><form method="post"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><input type="hidden" name="action" value="login"><label>App password<input type="password" name="password" autocomplete="current-password" autofocus required></label><button type="submit">Open workspace →</button></form></section>
 <?php else: $active=count(array_filter($rows,fn($r)=>!in_array($r['status'],['Lost','Do not contact','Won'])));$due=count(array_filter($rows,fn($r)=>$r['followup']&&$r['followup']<=gmdate('Y-m-d')&&!in_array($r['status'],['Lost','Do not contact','Won'])));$meet=count(array_filter($rows,fn($r)=>in_array($r['status'],['Meeting','Proposal'])));?>
 <section class="stats"><article><span>Saved prospects</span><strong><?=count($rows)?></strong><small>Research, ready to review</small></article><article><span>Active pipeline</span><strong><?=$active?></strong><small>From first look to proposal</small></article><article><span>Follow-ups due</span><strong><?=$due?></strong><small>Today and overdue · UTC dates</small></article><article><span>Meetings & proposals</span><strong><?=$meet?></strong><small>Conversations moving forward</small></article></section>
-<section class="panel discovery"><div><p class="eyebrow">01 / DISCOVER</p><h2>Find your next good-fit business</h2><p class="muted">Up to 5 prospects per search. Sources included. Buying intent and budget remain unverified.</p></div><form id="research"><label>Market<select name="country"><option>India</option><option>United Arab Emirates</option><option>United Kingdom</option><option>Australia</option><option>United States</option><option>Canada</option><option>Singapore</option><option>Worldwide</option></select></label><label>Industry<input name="industry" value="Manufacturers and distributors" maxlength="200" required></label><label>Service<select name="offer"><option>Website design and development</option><option>Custom software</option><option>AI automation</option></select></label><button id="find" type="submit">Find prospects ↗</button></form><div class="research-footer"><span>₹20,000+ target deal · 10–100 employees · Owner / sales / operations</span><span><?=$runs?> / <?=(int)($config['monthly_run_limit']??30)?> research runs this month</span></div><p id="research-status" role="status"><?=empty($config['openai_key'])?'Live research is not connected. Add your API key in the private server configuration.':'Live research ready. Each search uses separately billed API services.'?></p><small>Run limit controls request volume, not rupee spending. Set billing limits in your API account too.</small></section>
+<section class="panel discovery"><div><p class="eyebrow">01 / DISCOVER</p><h2>Find your next good-fit business</h2><p class="muted">Up to 5 prospects per search. Sources included. Buying intent and budget remain unverified.</p></div><form id="research"><label>Market<select name="country"><option>India</option><option>United Arab Emirates</option><option>United Kingdom</option><option>Australia</option><option>United States</option><option>Canada</option><option>Singapore</option><option>Worldwide</option></select></label><label>Industry<input name="industry" value="Manufacturers and distributors" maxlength="200" required></label><label>Service<select name="offer"><option>Website design and development</option><option>Custom software</option><option>AI automation</option></select></label><button id="find" type="submit">Find prospects ↗</button></form><div class="research-footer"><span>₹20,000+ target deal · 10–100 employees · Owner / sales / operations</span><span><?=$runs?> / <?=(int)($config['monthly_run_limit']??30)?> research runs this month</span></div><p id="research-status" role="status"><?=empty($config['openai_key'])?'Live research is not connected. Paste your API key below or add it in the private server configuration.':'Live research ready. Each search uses separately billed API services.'?></p><?php if(empty($config['openai_key'])):?><form method="post" style="display:flex;gap:8px;margin:8px 0 14px 0;max-width:560px;"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><input type="hidden" name="action" value="set_openai_key"><input type="password" name="openai_key" placeholder="Paste OpenAI API key (sk-proj-...)" required style="flex:1;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px;font-family:monospace;font-size:12px;"><button type="submit" class="quiet" style="background:#0f766e;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;white-space:nowrap;">Save Key</button></form><?php endif?><small>Run limit controls request volume, not rupee spending. Set billing limits in your API account too.</small></section>
 <section class="pipeline-heading"><div><p class="eyebrow">02 / QUALIFY & CONNECT</p><h2>Prospect workspace</h2></div><a class="quiet" href="?export=csv">Export CSV ↓</a></section>
 <div class="filters"><input id="filter" placeholder="Search company, industry, or country…" aria-label="Search prospects"><select id="stage-filter" aria-label="Filter by stage"><option value="">All stages</option><?php foreach($stages as $stage):?><option><?=esc($stage)?></option><?php endforeach?></select></div>
 <div id="leads"><?php if(!$rows):?><div class="empty panel"><h2>A focused pipeline starts with one search.</h2><p class="muted">Run your first research search above, or add a business you already know below.</p><p>No sample companies or invented leads are included.</p></div><?php endif?>
