@@ -3,7 +3,9 @@ require __DIR__.'/bootstrap.php';
 $error='';$message='';
 $stages=['New','Reviewed','Contacted','Replied','Verified Response (Call Ready)','Meeting','Proposal','Won','Lost','Do not contact'];
 if($_SERVER['REQUEST_METHOD']==='POST') {
- csrf();$action=$_POST['action']??'';
+ csrf();
+ $action=$_POST['action']??'';
+ if(!$action && isset($_POST['password'])) { $action = 'login'; }
  if($action==='login') {
   $client=hash('sha256',$_SERVER['REMOTE_ADDR']??'local');$now=time();
   $db->prepare('DELETE FROM login_attempts WHERE window_start<?')->execute([$now-900]);
@@ -11,7 +13,14 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
   $db->prepare($insert)->execute([$client,$now]);
   $reserve=$db->prepare('UPDATE login_attempts SET attempts=attempts+1 WHERE client=? AND attempts<10');$reserve->execute([$client]);
   if(!$reserve->rowCount())$error='Too many attempts. Please wait 15 minutes.';
-  elseif(password_verify($_POST['password']??'', $config['password_hash'])){session_regenerate_id(true);$_SESSION['user']=true;$db->prepare('DELETE FROM login_attempts WHERE client=?')->execute([$client]);header('Location: index.php');exit;}
+  elseif(password_verify(trim($_POST['password']??''), $config['password_hash'])){
+      session_regenerate_id(true);
+      $_SESSION['user']=true;
+      $db->prepare('DELETE FROM login_attempts WHERE client=?')->execute([$client]);
+      session_write_close();
+      header('Location: index.php');
+      exit;
+  }
   else{$error='Password not recognised.';}
  } elseif(logged()) {
   if($action==='logout'){$_SESSION=[];session_destroy();header('Location: index.php');exit;}
@@ -38,7 +47,7 @@ $month=gmdate('Y-m');$q=$db->prepare('SELECT runs FROM research_usage WHERE mont
 <aside><a class="brand" href="index.php"><span class="mark">M</span> MeraDomain<span class="sub">LEAD STUDIO</span></a><div class="nav">◉ &nbsp; Prospect workspace</div><p class="aside-note">Better research.<br>Relevant conversations.<br>Real opportunities.</p><div class="owner">VIPIN WADHWA<br><small>Independent workspace</small></div></aside>
 <main><header><div><p class="eyebrow">MERADOMAIN / BUSINESS DEVELOPMENT</p><h1>Your next opportunity starts here.</h1><p class="muted">Find businesses you can help. Build relationships with a clear purpose.</p></div><?php if(logged()):?><form method="post"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><button class="quiet" name="action" value="logout">Sign out</button></form><?php endif?></header>
 <?php if($error):?><p class="notice error"><?=esc($error)?></p><?php endif?><?php if($message):?><p class="notice"><?=esc($message)?></p><?php endif?>
-<?php if(!logged()):?><section class="login panel"><p class="eyebrow">PRIVATE WORKSPACE</p><h2>Welcome back, Vipin.</h2><p class="muted">Sign in to research businesses and manage your prospects.</p><form method="post"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><label>App password<input type="password" name="password" autocomplete="current-password" required></label><button name="action" value="login">Open workspace →</button></form></section>
+<?php if(!logged()):?><section class="login panel"><p class="eyebrow">PRIVATE WORKSPACE</p><h2>Welcome back, Vipin.</h2><p class="muted">Sign in to research businesses and manage your prospects.</p><form method="post"><input type="hidden" name="csrf" value="<?=esc($_SESSION['csrf'])?>"><input type="hidden" name="action" value="login"><label>App password<input type="password" name="password" autocomplete="current-password" autofocus required></label><button type="submit">Open workspace →</button></form></section>
 <?php else: $active=count(array_filter($rows,fn($r)=>!in_array($r['status'],['Lost','Do not contact','Won'])));$due=count(array_filter($rows,fn($r)=>$r['followup']&&$r['followup']<=gmdate('Y-m-d')&&!in_array($r['status'],['Lost','Do not contact','Won'])));$meet=count(array_filter($rows,fn($r)=>in_array($r['status'],['Meeting','Proposal'])));?>
 <section class="stats"><article><span>Saved prospects</span><strong><?=count($rows)?></strong><small>Research, ready to review</small></article><article><span>Active pipeline</span><strong><?=$active?></strong><small>From first look to proposal</small></article><article><span>Follow-ups due</span><strong><?=$due?></strong><small>Today and overdue · UTC dates</small></article><article><span>Meetings & proposals</span><strong><?=$meet?></strong><small>Conversations moving forward</small></article></section>
 <section class="panel discovery"><div><p class="eyebrow">01 / DISCOVER</p><h2>Find your next good-fit business</h2><p class="muted">Up to 5 prospects per search. Sources included. Buying intent and budget remain unverified.</p></div><form id="research"><label>Market<select name="country"><option>India</option><option>United Arab Emirates</option><option>United Kingdom</option><option>Australia</option><option>United States</option><option>Canada</option><option>Singapore</option><option>Worldwide</option></select></label><label>Industry<input name="industry" value="Manufacturers and distributors" maxlength="200" required></label><label>Service<select name="offer"><option>Website design and development</option><option>Custom software</option><option>AI automation</option></select></label><button id="find" type="submit">Find prospects ↗</button></form><div class="research-footer"><span>₹20,000+ target deal · 10–100 employees · Owner / sales / operations</span><span><?=$runs?> / <?=(int)($config['monthly_run_limit']??30)?> research runs this month</span></div><p id="research-status" role="status"><?=empty($config['openai_key'])?'Live research is not connected. Add your API key in the private server configuration.':'Live research ready. Each search uses separately billed API services.'?></p><small>Run limit controls request volume, not rupee spending. Set billing limits in your API account too.</small></section>
