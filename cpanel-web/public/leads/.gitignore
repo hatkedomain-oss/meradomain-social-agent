@@ -1,0 +1,6 @@
+meradomain-leads-config.php
+*.sqlite
+*.sqlite3
+*.log
+.DS_Store
+Thumbs.db

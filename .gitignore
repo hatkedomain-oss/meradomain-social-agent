@@ -4,6 +4,9 @@
 .env.local
 .env.production
 cpanel-web/.env
+meradomain-leads-config.php
+*.sqlite
+*.sqlite3
 
 # Python
 __pycache__/

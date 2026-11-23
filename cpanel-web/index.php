@@ -85,6 +85,12 @@ $csrfToken = Auth::getCsrfToken();
                 <button id="theme-toggle-btn" title="Toggle Theme" class="w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition shadow-sm">
                     <i id="theme-icon" class="fas fa-sun text-yellow-400 text-xs"></i>
                 </button>
+
+                <!-- Outbound Lead Studio Button -->
+                <a href="/leads/" target="_blank" title="Open Outbound Lead Studio in New Tab" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs font-semibold transition shadow-sm">
+                    <i class="fas fa-crosshairs text-xs"></i>
+                    <span class="hidden sm:inline">Lead Studio ↗</span>
+                </a>
             </div>
         </div>
     </header>
